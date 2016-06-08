@@ -113,6 +113,7 @@ define(
         $("#browse-catalog-button").click(function (event) {
             event.preventDefault();
             var StudioApp = require('StudioApp');
+            StudioApp.models.catalogBuckets.fetch({reset: true});
             StudioApp.views.catalogView.render();
             $('#catalog-browser-view-modal').modal();
         })
@@ -273,42 +274,19 @@ define(
 
         $("#publish-to-catalog-button").click(function (event) {
             console.log("publish-to-catalog-button event !");
-            var StudioApp = require('StudioApp');
 
-            // TODO how do I get the selected Bucket from the dropdown list ?
-            var mockedBucketId = 2;
-            var xmlToPublish = StudioApp.views.xmlView.generateXml();
-            var layout = JSON.stringify(StudioApp.models.currentWorkflow.getMetadata());
-            var createdWorkflowPromise = publish_to_catalog(mockedBucketId, xmlToPublish, layout);
-            var newWorkflow = undefined;
-            $.when(createdWorkflowPromise).then(function () {
-                newWorkflow = createdWorkflowPromise.responseJSON;
-                console.log(newWorkflow);
-                console.log('JSON:');
-                console.log(newWorkflow);
-                // We manually add the newly published workflow into the right bucket
-                // without relying on Backbone's persistence layer
-                var newWorkflowModel = StudioApp.models.catalogBuckets.models[1].get('workflows').add(
-                    {
-                        id: newWorkflow.id,
-                        name: newWorkflow.name,
-                        variables: newWorkflow.variables,
-                        generic_information: newWorkflow.generic_information,
-                        created_at: newWorkflow.created_at,
-                        revision_id: newWorkflow.revision_id,
-                        bucket_id: newWorkflow.bucket_id,
-                        project_name: newWorkflow.project_name,
-                        layout: newWorkflow.layout
-                    },
-                    {
-                        xmlContent: xmlToPublish,
-                        layout: layout
-                    });
-                console.log("new workflow model created:");
-                console.log(newWorkflowModel);
-            });
-            // TODO create a new RestWorkflow and add it to the adequate bucket
-
+            var selectedBucketId = $("#select-bucket").val();
+            if (selectedBucketId == -1) {
+                // #select-bucket-modal
+                // show modal
+                $('#select-bucket-modal').modal();
+            }
+            else {
+                var StudioApp = require('StudioApp');
+                var xmlToPublish = StudioApp.views.xmlView.generateXml();
+                var layout = JSON.stringify(StudioApp.models.currentWorkflow.getMetadata());
+                publish_to_catalog(selectedBucketId, xmlToPublish, layout);
+            }
         })
 
         // removing a task by del
@@ -340,7 +318,7 @@ define(
 
             // TODO add the layout as a query parameter
 
-            return $.ajax({
+            var createdWorkflowPromise = $.ajax({
                 url: '/workflow-catalog/buckets/' + bucketId + '/workflows',
                 type: 'POST',
                 contentType: false,
